@@ -1,0 +1,4 @@
+MONGO_URI = mongodb://admin:********@127.0.0.1:27017/myFirstDatabase?retryWrites=true&w=majority
+MONGO_DB = myFirstDatabase
+MEILISEARCH_HOST = http://127.0.0.1:7700
+MEILISEARCH_API_KEY = 4Py****************************KinB844A
