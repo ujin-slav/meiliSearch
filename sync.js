@@ -14,74 +14,84 @@ const client = new MeiliSearch({
 // ==================== КОНФИГУРАЦИЯ ДЛЯ ТВОЕЙ КОЛЛЕКЦИИ ====================
 
 const COLLECTIONS_TO_SYNC = [
-  {
-    collection: 'prices', // имя коллекции в MongoDB (строго в нижнем регистре + множественное число обычно)
-    index: 'prices',
-    primaryKey: 'id',
+ {
+  collection: 'prices',
+  index: 'prices',
+  primaryKey: 'id',
 
-    // Трансформация документа MongoDB → Meilisearch
-    transform: (doc) => ({
-      id: doc._id.toString(),
-      code: doc.Code || null,
-      name: doc.Name || null,
-      price: doc.Price || 0,
-      balance: doc.Balance || 0,
-      measure: doc.Measure || null,
+  // Трансформация документа MongoDB → Meilisearch
+  transform: (doc) => ({
+    id: doc._id.toString(),
 
-      // Если нужно искать по ID связанных документов — оставляем как строку
-      userId: doc.User ? doc.User.toString() : null,
-      specOfferId: doc.SpecOffer ? doc.SpecOffer.toString() : null,
-      priceId: doc.PriceId ? doc.PriceId.toString() : null,
+    code: doc.Code || null,
+    name: doc.Name || null,
+    price: doc.Price || 0,
+    balance: doc.doc.Balance || 0,
+    measure: doc.Measure || null,
 
-      // Массивы — приводим к массиву строк (на случай, если там ObjectId)
-      category: Array.isArray(doc.Category)
-        ? doc.Category.map(c => (typeof c === 'object' ? c.toString() : c))
-        : [],
-      region: Array.isArray(doc.Region)
-        ? doc.Region.map(r => (typeof r === 'object' ? r.toString() : r))
-        : [],
+    // ДЕНРОМАЛИЗОВАННЫЕ ПОЛЯ — теперь здесь!
+    userNameOrg: doc.UserNameOrg || null,
+    userInn: doc.UserInn || null,
 
-      date: doc.Date ? new Date(doc.Date).getTime() : null, // timestamp для сортировки
-    }),
+    // ID-шники (можно оставить, если где-то нужны)
+    userId: doc.User ? doc.User.toString() : null,
+    specOfferId: doc.SpecOffer ? doc.SpecOffer.toString() : null,
+    priceId: doc.PriceId ? doc.PriceId.toString() : null,
 
-    // Настройки поиска — очень важны для фильтров и сортировки!
-    settings: {
-      searchableAttributes: [
-        'name',
-        'code',
-      ],
-      filterableAttributes: [
-        'category',
-        'region',
-        'price',
-        'balance',
-        'measure',
-        'userId',
-        'specOfferId',
-        'priceId',
-      ],
-      sortableAttributes: [
-        'price',
-        'balance',
-        'date',
-      ],
-      rankingRules: [
-        'words',
-        'typo',
-        'proximity',
-        'attribute',
-        'sort',
-        'exactness',
-      ],
-      typoTolerance: {
-        enabled: true,
-      },
-      pagination: {
-        maxTotalHits: 10000,
-      },
-    },
+    // Массивы строк — безопасно приводим
+    category: Array.isArray(doc.Category)
+      ? doc.Category.map(c => (typeof c === 'object' && c !== null ? c.toString() : String(c)))
+      : [],
+    region: Array.isArray(doc.Region)
+      ? doc.Region.map(r => (typeof r === 'object' && r !== null ? r.toString() : String(r)))
+      : [],
+
+    date: doc.Date ? new Date(doc.Date).getTime() : null,
+
+    // Если хочешь фильтровать по наличию спецпредложения
+    hasSpecOffer: !!doc.SpecOffer,
+  }),
+
+  // Настройки поиска — обновлены под новые поля
+  settings: {
+    searchableAttributes: [
+      'name',
+      'code',
+      'userNameOrg',    // теперь можно искать по названию поставщика
+      'userInn',        // и по ИНН
+    ],
+    filterableAttributes: [
+      'category',
+      'region',
+      'price',
+      'balance',
+      'measure',
+      'userId',
+      'specOfferId',
+      'priceId',
+
+      // Новые фильтры — теперь работают мгновенно!
+      'userNameOrg',
+      'userInn',
+      'hasSpecOffer',
+    ],
+    sortableAttributes: [
+      'price',
+      'balance',
+      'date',
+    ],
+    rankingRules: [
+      'words',
+      'typo',
+      'proximity',
+      'attribute',
+      'sort',
+      'exactness',
+    ],
+    typoTolerance: { enabled: true },
+    pagination: { maxTotalHits: 10000 },
   },
-];
+},
 
 // =====================================================================
 
